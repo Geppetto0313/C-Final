@@ -8,6 +8,7 @@
 #define UYEL "\e[4;33m"
 #define reset "\e[0m"
 
+//STRUCT DEFINING ATTRIBUTES
 typedef struct Book
 {
     char bookName[100];
@@ -21,27 +22,28 @@ typedef struct Book
     struct Book *next;
 
 } Book;
+//SEEN ALOT OF PEOPLE CODE THESE RIGHT UNDER THE STRUCT DECLARATION
+// Book *start = NULL;
+// Book *move = NULL;
+// Book *last = NULL;
 
-Book *start = NULL;
-Book *move = NULL;
-Book *last = NULL;
-
-Book *NewEntry(Book *start);
-Book *LoadData(Book *start);
+//DECLEAR PROTOTYPES
+Book *NewEntry(Book *start, Book *last, Book *move);
+Book *LoadData(Book *start, Book *last, Book *move);
 void Save(Book *start);
-void BrowseEntries(Book *start);
-Book *ReadNextFromFile(Book *start, FILE *fptr);
-Book *Append(Book *start);
-Book *NewBook();
+void BrowseEntries(Book *start, Book *last, Book *move);
+Book *ReadNextFromFile(Book *start, Book *last, Book *move, FILE *fptr);
+Book *Append(Book *start, Book *last, Book *move);
+Book *NewBook(Book *start, Book *last, Book *move);
 void MainMenu();
 void Menu();
-void Delete(Book **start);
-void Sort();
-void SearchBookName(Book *start);
-void SearchAuthorName(Book *start);
-void Modify(Book *start);
+void Delete(Book **start, Book *last, Book *move);
+void Sort(Book *start);
+void SearchBookName(Book *start, Book *move);
+void SearchAuthorName(Book *start, Book *move);
+void Modify(Book *start, Book *move);
 void ModifyMenu(Book *temp);
-void ModSelection(Book *temp);
+void ModSelection(Book *start, Book *move, Book *temp);
 void ClearOnExit(Book **start);
 void TEST();
 
@@ -50,9 +52,14 @@ int main()
     char ch;
     int userInput = -1;
     int newInput = -1;
+    Book *start = NULL;
+    Book *move = NULL;
+    Book *last = NULL;
 
+    //CALL MAIN MENU
     MainMenu();
 
+    //WHILE LOOP - USER INPUT DATA OR LOAD
     while (newInput != 0)
     {
         printf("Select An Option: ");
@@ -67,11 +74,11 @@ int main()
             exit(3);
 
         case 1:
-            start = NewEntry(start);
+            start = NewEntry(start, last, move);
             newInput = 0;
             break;
         case 2:
-            start = LoadData(start);
+            start = LoadData(start, last, move);
             newInput = 0;
             break;
         default:
@@ -79,8 +86,10 @@ int main()
             MainMenu();
         }
     }
+    //CALLING MENU
     Menu();
 
+    //WHILE LOOP FOR MENU
     while (userInput != 0)
     {
         printf("Select An Option: ");
@@ -95,11 +104,11 @@ int main()
             printf(KRED "\nLogging out...\n" reset);
             break;
         case 1:
-            start = Append(start);
+            start = Append(start, last, move);
             Menu();
             break;
         case 2:
-            BrowseEntries(start);
+            BrowseEntries(start, last, move);
             Menu();
             break;
         case 3:
@@ -107,27 +116,27 @@ int main()
             Menu();
             break;
         case 4:
-            Delete(&start);
+            Delete(&start, last, move);
             Menu();
             break;
         case 5:
-            Sort();
+            Sort(start);
             Menu();
             break;
         case 6:
-            SearchBookName(start);
+            SearchBookName(start, move);
             Menu();
             break;
         case 7:
-            SearchAuthorName(start);
+            SearchAuthorName(start, move);
             Menu();
             break;
         case 8:
-            Modify(start);
+            Modify(start, move);
             Menu();
             break;
         case 66:
-            TEST();
+            TEST(start, last, move);
             newInput = 0;
             break;
         default:
@@ -138,6 +147,7 @@ int main()
     return 0;
 }
 
+//  MAIN MENU FUNCTION - PRINTS OUT MENU
 void MainMenu()
 {
     printf("\n");
@@ -149,6 +159,7 @@ void MainMenu()
     printf("--------------------------\n");
 }
 
+//  MENU FUNCTION - PRINTS OUT MENU
 void Menu()
 {
     printf("\n");
@@ -166,7 +177,8 @@ void Menu()
     printf("--------------------------\n");
 }
 
-Book *NewEntry(Book *start)
+//  MEW ENTRY FUNCTION
+Book *NewEntry(Book *start, Book *last, Book *move)
 {
 
     Book *new = NULL;
@@ -312,10 +324,14 @@ Book *NewEntry(Book *start)
     return start;
 }
 
-Book *ReadNextFromFile(Book *start, FILE *fptr)
+//  READ FROM FILE FUNCTION
+Book *ReadNextFromFile(Book *start, Book *last, Book *move, FILE *fptr)
 {
     Book *new = NULL;
+    //SETTING AN UNSIGNED LONG LONG VALUE FOR THE FILE TO BE READ BACK ON
     size_t returnValue;
+
+    //START EQUAL NULL START AT START
     if (start == NULL)
     {
         start = new;
@@ -327,6 +343,7 @@ Book *ReadNextFromFile(Book *start, FILE *fptr)
     }
     else
     {
+        //ELSE MOVE TO START AND START
         move = start;
         new = (Book *)malloc(sizeof(Book));
         while (move->next != NULL)
@@ -344,24 +361,30 @@ Book *ReadNextFromFile(Book *start, FILE *fptr)
     return start;
 }
 
-Book *LoadData(Book *start)
+//  LOAD DATA FUNCTION
+Book *LoadData(Book *start, Book *last, Book *move)
 {
+    //OPEN FILE
     FILE *fptr;
     fptr = fopen("Books.bin", "rb");
+    //IF NOTHING
     if (fptr != NULL)
     {
+        //FIND THE END OF THE FILE, GET SIZE AND GO TO THE START
         start = NULL;
         fseek(fptr, 0, SEEK_END);
         long fileSize = ftell(fptr);
         rewind(fptr);
 
+        //COUNT ENTRIES
         int numEntries = (int)(fileSize / (sizeof(Book)));
         printf("\nNumber of Entries: " KCYN "%d" reset "\n", numEntries);
 
+        //LOOK THROUGH FILE BASED ON ENTRIES
         for (int i = 0; i < numEntries; ++i)
         {
             fseek(fptr, (sizeof(Book) * i), SEEK_SET);
-            start = ReadNextFromFile(start, fptr);
+            start = ReadNextFromFile(start, last, move, fptr);
         }
     }
     else
@@ -369,14 +392,16 @@ Book *LoadData(Book *start)
         printf(KRED "\nError: Reading File\n" reset);
         exit(2);
     }
+    //CLOSE FILE
     fclose(fptr);
     return start;
 }
 
-void BrowseEntries(Book *start)
+//  BROWSE FUNCTION
+void BrowseEntries(Book *start, Book *last, Book *move)
 {
     move = start;
-
+    //START IS NULL, LIST IS EMPTY
     if (start == NULL)
     {
         printf(KRED "\n*List is empty.\n" reset);
@@ -419,31 +444,39 @@ void BrowseEntries(Book *start)
     }
 }
 
+//  SAVE FUNCTION
 void Save(Book *start)
 {
+    //   POINT TO FILE AND OPEN FILE IN BINARY
     FILE *fptr;
     fptr = fopen("Books.bin", "wb");
 
+    //  IF FILE OPENS
     if (fptr != NULL)
     {
 
         Book *new = start;
         Book *temp = NULL;
 
+        //IF START POSITION ISNT NULL WRITE TO FILE
         while (new != NULL)
         {
+            //  TEMP
             temp = new->next;
 
             new->next = NULL;
 
+            //  FILE PTR TO END OF FILE PRINT BOOKSTRUCT
             fseek(fptr, 0, SEEK_END);
             fwrite(new->bookName, sizeof(Book), 1, fptr);
 
             printf("Writing To File Book: " KCYN "%s" reset "", new->bookName);
 
+            //  SET POINTERS BACK TO NOT BREAK THE LIST
             new->next = temp;
             temp = NULL;
 
+            //  NEW IS NEXT POINTER
             new = new->next;
         }
 
@@ -457,7 +490,8 @@ void Save(Book *start)
     }
 }
 
-Book *Append(Book *start)
+//  APPEND FUNCTION
+Book *Append(Book *start, Book *last, Book *move)
 {
     char ch;
     double numDouble;
@@ -467,6 +501,7 @@ Book *Append(Book *start)
 
     if (start == NULL)
     {
+        //  allocate a block of memory for Book
         new = (Book *)malloc(sizeof(Book));
 
         if (new == NULL)
@@ -475,10 +510,10 @@ Book *Append(Book *start)
             exit(1);
         }
 
-        //assign new block to start
+        //  assign new block to start
         start = new;
 
-        //get information
+        //  get information
         printf("\n");
 
         printf("Enter Book Title: ");
@@ -519,28 +554,30 @@ Book *Append(Book *start)
 
         printf("\n");
 
-        //pointer to next is null to indicate nothing follows
+        //  pointer to next is null to indicate nothing follows
         start->next = NULL;
-        //change last pointer to point to the one just created
+        //  change last pointer to point to the one just created
         last = start;
         move = last;
     }
     else
     {
-
+        // IF INDEX = START AND NEXT IS NOT NULL INDEX = INDEXBOOK-NEXT
         Book *indexBook = start;
         while (indexBook->next != NULL)
         {
             indexBook = indexBook->next;
         }
-        new = NewBook();
+        //  WHEN INDEX-> IS NULL CALL NEWBOOK FUNCTION
+        new = NewBook(start, last, move);
         indexBook->next = new;
         new->next = NULL;
     }
     return start;
 }
 
-Book *NewBook()
+//  NEW ENTRY FUNCTION
+Book *NewBook(Book *start, Book *last, Book *move)
 {
     Book *new = NULL;
     double numDouble;
@@ -548,10 +585,10 @@ Book *NewBook()
     char ch;
     char userInput[255];
 
+    //  ALLOCATE MEMORY
     new = (Book *)malloc(sizeof(Book));
 
     //get information
-
     printf("\n");
 
     printf("Enter Book Title: ");
@@ -599,10 +636,13 @@ Book *NewBook()
     return new;
 }
 
-void Delete(Book **start)
+//  DELETE FUNCTION USING POINTER TO A POINTER
+void Delete(Book **start, Book *last, Book *move)
 {
-    Book *temp = *start, *previous;
+    Book *temp = *start;
+    // Book *previous = NULL;
 
+    //  CHECK IF LIST IS EMPTY
     if (*start == NULL)
     {
         last = NULL;
@@ -611,12 +651,14 @@ void Delete(Book **start)
         return;
     }
 
+    //  USER INPUT
     printf("\nEnter Book Title To Delete Book: ");
     char userInput[255];
     fgets(userInput, 255, stdin);
 
     if (temp != NULL && strncmp(userInput, temp->bookName, strlen(temp->bookName)) == 0)
     {
+        //  IF FIRST POSITION MOVE START TO TEMP->NEXT; FREE TEMP
         *start = temp->next;
         move = *start;
         printf(KRED "\n*%sMemory Freed\n" reset "", temp);
@@ -626,32 +668,37 @@ void Delete(Book **start)
 
     while ((temp != NULL && strncmp(userInput, temp->bookName, strlen(temp->bookName)) != 0))
     {
-        previous = temp;
-        move = previous;
+        //  IF NOT MOVE = TEMP; TEMP = TEMP->NEXT;
+        move = temp;
         temp = temp->next;
     }
-
-    previous->next = temp->next;
-    last = previous;
+    //GET TEMP->NEXT POSTION; DELETE TEMP
+    move->next = temp->next;
+    last = move;
     printf(KRED "\n*%sMemory Freed 2\n" reset "", temp);
     free(temp);
 }
-
-void Sort()
+//  SORT FUNCTION
+void Sort(Book *start)
 {
     Book *i, *j;
     char temp[100];
     double tempDouble;
     int tempInt;
 
+    //COMPARE I TO J SAME AS ASSIGNMENT 2
     for (i = start; i->next != NULL; i = i->next)
     {
         for (j = i->next; j != NULL; j = j->next)
         {
+            //IF I IS > J I EQUALS 1
             if (strcmp(i->bookName, j->bookName) > 0)
             {
+                //  COPY I  VALUE TO TEMP
                 strcpy(temp, i->bookName);
+                //  COPY J VALUE T I
                 strcpy(i->bookName, j->bookName);
+                //  COPY TEMP TO J -> SWITCHING THE VALUES OF I AND J
                 strcpy(j->bookName, temp);
 
                 strcpy(temp, i->author);
@@ -686,7 +733,8 @@ void Sort()
     }
 }
 
-void SearchBookName(Book *start)
+//  SEARCH BOOK NAME FUNCTION
+void SearchBookName(Book *start, Book *move)
 {
     move = start;
 
@@ -696,6 +744,7 @@ void SearchBookName(Book *start)
         main();
     }
 
+    //  USER INPUT
     printf("Enter Book Title To Search: ");
     char userInput[255];
     fgets(userInput, 255, stdin);
@@ -704,11 +753,11 @@ void SearchBookName(Book *start)
     while (move != NULL)
     {
 
+        //  COMPARE USER INPUT TO BOOKNAME IF EQUAL PRINT
         if (strcmp(move->bookName, userInput) == 0)
         {
             printf("\n");
             printf(UYEL "BOOK\n" reset);
-            // printf("--------------------------\n");
             printf(KCYN "Book Title: " reset "%s", move->bookName);
             printf(KCYN "Author: " reset "%s", move->author);
             printf(KCYN "Publisher: " reset "%s", move->publisher);
@@ -719,14 +768,15 @@ void SearchBookName(Book *start)
             printf(KCYN "Due Date: " reset "%s", move->dueDate);
             printf("--------------------------\n\n");
             return;
-        }
+        } //IF NOT LOOP BACK THROUGH
         move = move->next;
     }
 
     printf(KRED "*No Book By That Name.\n" reset);
 }
 
-void SearchAuthorName(Book *start)
+//  SEARCH AUTHOR NAME FUNCTION
+void SearchAuthorName(Book *start, Book *move)
 {
     move = start;
 
@@ -736,6 +786,7 @@ void SearchAuthorName(Book *start)
         main();
     }
 
+    //GET USER INPUT
     printf("Enter Author Name To Search: ");
     char userInput[255];
     fgets(userInput, 255, stdin);
@@ -744,6 +795,7 @@ void SearchAuthorName(Book *start)
     while (move != NULL)
     {
 
+        //  COMPARE USER INPUT TO AUTHOR IF EQUAL PRINT
         if (strcmp(move->author, userInput) == 0)
         {
             printf("\n");
@@ -760,12 +812,16 @@ void SearchAuthorName(Book *start)
             printf("--------------------------\n\n");
             return;
         }
-        move = move->next;
+        //  ELSE LOOP THOUGH
+        else
+        {
+            move = move->next;
+        }
     }
     printf(KRED "*No Author By That Name.\n" reset);
 }
 
-void Modify(Book *start)
+void Modify(Book *start, Book *move)
 {
     Book *temp = NULL;
 
@@ -777,6 +833,7 @@ void Modify(Book *start)
         main();
     }
 
+    //  GET USER INPUT
     printf("\nEnter Book Title To Modify: ");
     char userInput[255];
     fgets(userInput, 255, stdin);
@@ -784,6 +841,7 @@ void Modify(Book *start)
     while (move != NULL)
     {
 
+        //  IF BOOKNAME EQUALS USER INPUT PRINT THAT POINTER
         if (strcmp(move->bookName, userInput) == 0)
         {
             printf("\n");
@@ -805,17 +863,21 @@ void Modify(Book *start)
         move = move->next;
     }
 
-    ModSelection(temp);
+    ModSelection(start, move, temp);
 }
 
-void ModSelection(Book *temp)
+//  MODIIFY SELECTION FUCNTION
+void ModSelection(Book *start, Book *move, Book *temp)
 {
     double numDouble;
     int numInt;
     int menuInput = -1;
     char ch;
+
+    //CALL MENU
     ModifyMenu(temp);
 
+    // GET USER INPUT
     printf("\nSelect An Option ");
     scanf("%d", &menuInput);
     while ((ch = getchar()) != '\n' && ch != EOF)
@@ -828,14 +890,16 @@ void ModSelection(Book *temp)
         case 0:
             menuInput = 0;
         case 1:
-            Modify(start);
+            //  CALL MODIFY MENU TO ENTER A NEW BOOK
+            Modify(start, move);
         case 2:
+            //  PROMPT FOR USER INPUT -> COPY NEW INOUT OVER OLD -> BREAK LOOP -> CALL FUNCTION AGAIN
             printf("\nEdit Book Title - " KCYN "%s" reset "", temp->bookName);
             printf("Edit: ");
             fgets(titleName, 255, stdin);
             strcpy(temp->bookName, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 3:
             printf("\nEdit Author Name - " KCYN "%s" reset "", temp->author);
@@ -843,7 +907,7 @@ void ModSelection(Book *temp)
             fgets(titleName, 255, stdin);
             strcpy(temp->author, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 4:
             printf("\nEdit Publisher - " KCYN "%s" reset "", temp->publisher);
@@ -851,7 +915,7 @@ void ModSelection(Book *temp)
             fgets(titleName, 255, stdin);
             strcpy(temp->publisher, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 5:
             printf("\nEdit Replacement Cost - " KCYN "%.2lf\n" reset "", temp->replacementCost);
@@ -861,7 +925,7 @@ void ModSelection(Book *temp)
             while ((ch = getchar()) != '\n' && ch != EOF)
                 ;
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 6:
             printf("\nEdit Subject - " KCYN "%s" reset "", temp->subjectOfMaterial);
@@ -869,7 +933,7 @@ void ModSelection(Book *temp)
             fgets(titleName, 255, stdin);
             strcpy(temp->subjectOfMaterial, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 7:
             printf("\nEdit Index Number - " KCYN "%d\n" reset "", temp->indexNumber);
@@ -879,7 +943,7 @@ void ModSelection(Book *temp)
             while ((ch = getchar()) != '\n' && ch != EOF)
                 ;
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 8:
             printf("\nEdit Currently Loaned To - " KCYN "%s" reset "", temp->currentlyOnLoanTo);
@@ -887,7 +951,7 @@ void ModSelection(Book *temp)
             fgets(titleName, 255, stdin);
             strcpy(temp->currentlyOnLoanTo, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         case 9:
             printf("\nEdit Due Date[YYYY-MM-DD] - " KCYN "%s" reset "", temp->dueDate);
@@ -895,7 +959,7 @@ void ModSelection(Book *temp)
             fgets(titleName, 255, stdin);
             strcpy(temp->dueDate, titleName);
             menuInput = 0;
-            ModSelection(temp);
+            ModSelection(start, move, temp);
             break;
         default:
             printf(KRED "\n*Invalid Selection\n" reset);
@@ -903,6 +967,7 @@ void ModSelection(Book *temp)
     }
 }
 
+// MODIFY MENU FUNCTION
 void ModifyMenu(Book *temp)
 {
     printf("\n");
@@ -920,6 +985,7 @@ void ModifyMenu(Book *temp)
     printf(KRED "0" reset ". Menu\n");
 }
 
+//  CLEAR ON EXIT FUNCTION I DIDNT WRITE THIS I FOUND IT TRYING TO BETTER UNDERSTAND POINTER TO POINTER
 void ClearOnExit(Book **start)
 {
     if (*start == NULL)
@@ -936,10 +1002,11 @@ void ClearOnExit(Book **start)
     free(*start);
 }
 
-void TEST()
+//  I USED THIS TO FOLLOW MY POINTERS TO MAKE SURE I UNDERSTOOD WHAT WAS HAPPENING.
+//  IN THE END I THINK IT DID MORE DAMAGE THEN GOOD GETTING ME TO ADD MORE PARAMETERS TO FUNCTIONS THEN NEEDED RESULTING IN MORE CODE.
+//  ORDER 66 TO CALL THIS FUNCTION.
+void TEST(Book *start, Book *last, Book *move)
 {
-    //I USEd THIS TO FOLLOW MY POINTERS TO MAKE SURE I UNDERSTOOD WHAT WAS HAPPENING.
-    //ITS A SECRET ORDER.. ORDER 66.
     printf("\n");
 
     printf("Start Pointer: %s\n", start);
